@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>키르히호프 법칙 & 가우스 소거법 - 복잡한 회로 분석기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .circuit-diagram {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .circuit-diagram h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        #circuitCanvas {
+            width: 100%;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+            max-height: 570px;
+            overflow-y: auto;
+        }
+        
+        .controls h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding-bottom: 10px;
+            z-index: 10;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .control-group h3 {
+            color: #555;
+            margin-bottom: 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .control-item label {
+            min-width: 60px;
+            font-weight: 600;
+            color: #444;
+            font-size: 14px;
+        }
+        
+        .control-item input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .control-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .control-item .unit {
+            min-width: 30px;
+            color: #666;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+            position: sticky;
+            bottom: 0;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+        
+        .results-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        .kirchhoff-equations {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .kirchhoff-equations h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        
+        .equation {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            border-radius: 5px;
+            line-height: 1.8;
+        }
+        
+        .gaussian-elimination {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .gaussian-elimination h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #764ba2;
+            padding-bottom: 8px;
+        }
+        
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #764ba2;
+        }
+        
+        .step-title {
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .matrix-container {
+            overflow-x: auto;
+            margin: 10px 0;
+            padding: 5px;
+        }
+        
+        .matrix {
+            display: inline-block;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            min-width: 100%;
+        }
+        
+        .matrix-row {
+            display: flex;
+            gap: 12px;
+            margin: 5px 0;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+        
+        .matrix-cell {
+            min-width: 90px;
+            text-align: right;
+            padding: 6px 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            color: #333;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .matrix-cell.highlight {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+        }
+        
+        .matrix-cell.pivot {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            font-weight: bold;
+        }
+        
+        .final-results {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+        
+        .final-results h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .result-item {
+            background: rgba(255,255,255,0.2);
+            padding: 12px 20px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .result-label {
+            font-weight: 600;
+        }
+        
+        .result-value {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .explanation {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+            font-size: 13px;
+            color: #0d47a1;
+            line-height: 1.6;
+        }
+
+        .branch-currents {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .branch-currents h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #ff9800;
+            padding-bottom: 8px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            .matrix-cell {
+                min-width: 70px;
+                font-size: 10px;
+                padding: 4px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 키르히호프 법칙 & 가우스 소거법 회로 분석기</h1>
+        <p class="subtitle">4개의 메시를 가진 복잡한 회로 분석 - 4×4 행렬 시스템 단계별 가우스 소거법 시각화</p>
+        
+        <div class="main-grid">
+            <div class="circuit-diagram">
+                <h2>📊 회로 다이어그램 (4-Mesh Network)</h2>
+                <canvas id="circuitCanvas"></canvas>
+            </div>
+            
+            <div class="controls">
+                <h2>🔧 회로 파라미터 설정</h2>
+                
+                <div class="control-group">
+                    <h3>🔋 전압원 (Voltage Sources)</h3>
+                    <div class="control-item">
+                        <label>E₁:</label>
+                        <input type="number" id="e1" value="24" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                    <div class="control-item">
+                        <label>E₂:</label>
+                        <input type="number" id="e2" value="18" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                    <div class="control-item">
+                        <label>E₃:</label>
+                        <input type="number" id="e3" value="12" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                    <div class="control-item">
+                        <label>E₄:</label>
+                        <input type="number" id="e4" value="9" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>⚡ 저항 (Resistors)</h3>
+                    <div class="control-item">
+                        <label>R₁:</label>
+                        <input type="number" id="r1" value="5" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₂:</label>
+                        <input type="number" id="r2" value="3" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₃:</label>
+                        <input type="number" id="r3" value="4" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₄:</label>
+                        <input type="number" id="r4" value="6" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₅:</label>
+                        <input type="number" id="r5" value="2" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₆:</label>
+                        <input type="number" id="r6" value="7" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₇:</label>
+                        <input type="number" id="r7" value="4" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₈:</label>
+                        <input type="number" id="r8" value="5" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                    <div class="control-item">
+                        <label>R₉:</label>
+                        <input type="number" id="r9" value="3" step="0.1">
+                        <span class="unit">Ω</span>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="calculate()">🧮 계산 시작</button>
+            </div>
+        </div>
+        
+        <div class="results-section" id="results" style="display:none;">
+            <h2>📈 계산 결과 및 단계별 분석</h2>
+            
+            <div class="kirchhoff-equations">
+                <h3>1️⃣ 키르히호프 전압 법칙 (KVL) 적용 - 메시 방정식</h3>
+                <div class="explanation">
+                    <strong>메시 해석법 (Mesh Analysis):</strong> 각 폐회로(메시)에 대해 키르히호프 전압 법칙을 적용합니다.
+                    모든 메시 전류는 시계방향으로 가정하며, 공유 저항에서는 인접 메시 전류의 영향을 고려합니다.
+                </div>
+                <div id="kvlEquations"></div>
+            </div>
+            
+            <div class="gaussian-elimination">
+                <h3>2️⃣ 가우스 소거법 (Gaussian Elimination) - 전방 소거 과정</h3>
+                <div class="explanation">
+                    <strong>목표:</strong> 4×4 확대 행렬을 상삼각 행렬(Upper Triangular Matrix)로 변환합니다.
+                    각 단계에서 피벗 원소(대각선 원소) 아래의 모든 원소를 0으로 만들며, 부분 피벗팅(Partial Pivoting)을 사용하여 수치적 안정성을 확보합니다.
+                </div>
+                <div id="gaussianSteps"></div>
+            </div>
+            
+            <div class="gaussian-elimination">
+                <h3>3️⃣ 후방 대입 (Back Substitution)</h3>
+                <div class="explanation">
+                    <strong>방법:</strong> 상삼각 행렬을 얻은 후, 마지막 방정식(4번째)부터 시작하여 위로 올라가며 각 미지수를 차례로 구합니다.
+                    각 단계에서 이미 구한 값들을 대입하여 계산합니다.
+                </div>
+                <div id="backSubstitution"></div>
+            </div>
+            
+            <div class="final-results">
+                <h3>✨ 최종 메시 전류 결과</h3>
+                <div id="finalCurrents"></div>
+            </div>
+
+            <div class="branch-currents">
+                <h3>4️⃣ 각 소자를 통과하는 실제 전류</h3>
+                <div class="explanation">
+                    공유 저항을 통과하는 전류는 인접한 메시 전류들의 차이로 계산됩니다.
+                </div>
+                <div id="branchCurrents"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 회로 그리기
+        function drawCircuit() {
+            const canvas = document.getElementById('circuitCanvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // 스타일 설정
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2.5;
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#333';
+            
+            const margin = 40;
+            const meshWidth = (width - 2 * margin) / 2;
+            const meshHeight = (height - 2 * margin) / 2;
+            
+            // 그리드 노드 정의 (3x3 그리드)
+            const nodes = [];
+            for (let row = 0; row < 3; row++) {
+                nodes[row] = [];
+                for (let col = 0; col < 3; col++) {
+                    nodes[row][col] = {
+                        x: margin + col * meshWidth,
+                        y: margin + row * meshHeight
+                    };
+                }
+            }
+            
+            // 배터리 그리기 함수
+            function drawBattery(x1, y1, x2, y2, label) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const ux = dx / len;
+                const uy = dy / len;
+                
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+                
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(Math.atan2(dy, dx));
+                
+                // 선 그리기
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-len/2, 0);
+                ctx.lineTo(-20, 0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(len/2, 0);
+                ctx.stroke();
+                
+                // 배터리 심볼
+                ctx.strokeStyle = '#d32f2f';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-15, -8);
+                ctx.lineTo(-15, 8);
+                ctx.stroke();
+                
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-5, -12);
+                ctx.lineTo(-5, 12);
+                ctx.stroke();
+                
+                // 레이블
+                ctx.fillStyle = '#d32f2f';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(label, -8, -18);
+                
+                ctx.restore();
+            }
+            
+            // 저항 그리기 함수
+            function drawResistor(x1, y1, x2, y2, label) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+                
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(Math.atan2(dy, dx));
+                
+                // 선 그리기
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-len/2, 0);
+                ctx.lineTo(-25, 0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(25, 0);
+                ctx.lineTo(len/2, 0);
+                ctx.stroke();
+                
+                // 저항 심볼
+                ctx.strokeStyle = '#1976d2';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-25, 0);
+                for (let i = 0; i < 5; i++) {
+                    ctx.lineTo(-20 + i * 10, i % 2 === 0 ? -6 : 6);
+                }
+                ctx.lineTo(25, 0);
+                ctx.stroke();
+                
+                // 레이블
+                ctx.fillStyle = '#1976d2';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(label, -8, 18);
+                
+                ctx.restore();
+            }
+            
+            // 메시 전류 화살표 그리기
+            function drawMeshCurrent(x, y, radius, label) {
+                ctx.strokeStyle = '#7b1fa2';
+                ctx.fillStyle = '#7b1fa2';
+                ctx.lineWidth = 2;
+                
+                // 원형 화살표
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0.3, 2 * Math.PI - 0.3);
+                ctx.stroke();
+                
+                // 화살표 머리
+                const angle = -0.3;
+                const arrowX = x + radius * Math.cos(angle);
+                const arrowY = y + radius * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(arrowX, arrowY);
+                ctx.lineTo(arrowX - 8, arrowY - 8);
+                ctx.lineTo(arrowX - 3, arrowY - 3);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 레이블
+                ctx.font = 'bold 15px Arial';
+                ctx.fillText(label, x - 8, y + 5);
+            }
+            
+            // 회로 그리기
+            // Mesh 1 (좌상단)
+            drawBattery(nodes[0][0].x, nodes[0][0].y, nodes[0][1].x, nodes[0][1].y, 'E₁');
+            drawResistor(nodes[0][1].x, nodes[0][1].y, nodes[1][1].x, nodes[1][1].y, 'R₂');
+            drawResistor(nodes[1][1].x, nodes[1][1].y, nodes[1][0].x, nodes[1][0].y, 'R₄');
+            drawResistor(nodes[1][0].x, nodes[1][0].y, nodes[0][0].x, nodes[0][0].y, 'R₁');
+            
+            // Mesh 2 (우상단)
+            drawResistor(nodes[0][1].x, nodes[0][1].y, nodes[0][2].x, nodes[0][2].y, 'R₃');
+            drawBattery(nodes[0][2].x, nodes[0][2].y, nodes[1][2].x, nodes[1][2].y, 'E₂');
+            drawResistor(nodes[1][2].x, nodes[1][2].y, nodes[1][1].x, nodes[1][1].y, 'R₅');
+            // R₂는 공유
+            
+            // Mesh 3 (좌하단)
+            // R₄는 공유
+            drawResistor(nodes[1][1].x, nodes[1][1].y, nodes[2][1].x, nodes[2][1].y, 'R₇');
+            drawBattery(nodes[2][1].x, nodes[2][1].y, nodes[2][0].x, nodes[2][0].y, 'E₃');
+            drawResistor(nodes[2][0].x, nodes[2][0].y, nodes[1][0].x, nodes[1][0].y, 'R₆');
+            
+            // Mesh 4 (우하단)
+            // R₇는 공유
+            drawResistor(nodes[1][2].x, nodes[1][2].y, nodes[2][2].x, nodes[2][2].y, 'R₈');
+            drawBattery(nodes[2][2].x, nodes[2][2].y, nodes[2][1].x, nodes[2][1].y, 'E₄');
+            // R₅는 공유
+            
+            // 추가 저항 R₉ (중앙 수평)
+            const midLeft = { x: nodes[1][0].x, y: nodes[1][0].y };
+            const midMid = { x: nodes[1][1].x, y: nodes[1][1].y };
+            // R₄로 대체됨
+            
+            // 노드 그리기
+            ctx.fillStyle = '#333';
+            const nodeRadius = 4;
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    ctx.beginPath();
+                    ctx.arc(nodes[row][col].x, nodes[row][col].y, nodeRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+            
+            // 메시 전류 표시
+            const meshCenters = [
+                { x: (nodes[0][0].x + nodes[1][1].x) / 2, y: (nodes[0][0].y + nodes[1][1].y) / 2, label: 'I₁' },
+                { x: (nodes[0][1].x + nodes[1][2].x) / 2, y: (nodes[0][1].y + nodes[1][2].y) / 2, label: 'I₂' },
+                { x: (nodes[1][0].x + nodes[2][1].x) / 2, y: (nodes[1][0].y + nodes[2][1].y) / 2, label: 'I₃' },
+                { x: (nodes[1][1].x + nodes[2][2].x) / 2, y: (nodes[1][1].y + nodes[2][2].y) / 2, label: 'I₄' }
+            ];
+            
+            meshCenters.forEach(mesh => {
+                drawMeshCurrent(mesh.x, mesh.y, 35, mesh.label);
+            });
+        }
+        
+        // 행렬 표시 함수
+        function displayMatrix(matrix, highlightRow = -1, highlightCol = -1, pivotRow = -1, pivotCol = -1) {
+            let html = '<div class="matrix">';
+            for (let i = 0; i < matrix.length; i++) {
+                html += '<div class="matrix-row">';
+                for (let j = 0; j < matrix[i].length; j++) {
+                    let className = 'matrix-cell';
+                    if (i === pivotRow && j === pivotCol) {
+                        className += ' pivot';
+                    } else if (i === highlightRow || j === highlightCol) {
+                        className += ' highlight';
+                    }
+                    html += `<span class="${className}">${matrix[i][j].toFixed(4)}</span>`;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            return html;
+        }
+        
+        // 가우스 소거법
+        function gaussianElimination(A, b) {
+            const n = A.length;
+            const augmented = [];
+            
+            // 확대 행렬 생성
+            for (let i = 0; i < n; i++) {
+                augmented[i] = [...A[i], b[i]];
+            }
+            
+            const steps = [];
+            
+            // 초기 행렬
+            steps.push({
+                title: '초기 확대 행렬 [A|b]',
+                description: `${n}×${n} 계수 행렬 A와 상수 벡터 b를 결합한 확대 행렬입니다. 이 행렬을 상삼각 행렬로 변환할 것입니다.`,
+                matrix: augmented.map(row => [...row])
+            });
+            
+            // 전방 소거 (Forward Elimination)
+            for (let k = 0; k < n - 1; k++) {
+                // 피벗 찾기 (부분 피벗팅)
+                let maxRow = k;
+                for (let i = k + 1; i < n; i++) {
+                    if (Math.abs(augmented[i][k]) > Math.abs(augmented[maxRow][k])) {
+                        maxRow = i;
+                    }
+                }
+                
+                // 행 교환
+                if (maxRow !== k) {
+                    [augmented[k], augmented[maxRow]] = [augmented[maxRow], augmented[k]];
+                    steps.push({
+                        title: `🔄 행 교환: R${k+1} ↔ R${maxRow+1}`,
+                        description: `수치적 안정성을 위해 ${k+1}번째 열에서 절댓값이 가장 큰 원소를 피벗으로 선택합니다. (부분 피벗팅, Partial Pivoting)`,
+                        matrix: augmented.map(row => [...row]),
+                        pivotRow: k,
+                        pivotCol: k
+                    });
+                }
+                
+                // 피벗이 0인 경우 처리
+                if (Math.abs(augmented[k][k]) < 1e-10) {
+                    console.error('특이 행렬: 해가 존재하지 않거나 무수히 많습니다.');
+                    return null;
+                }
+                
+                // k번째 열의 아래 원소들을 0으로 만들기
+                for (let i = k + 1; i < n; i++) {
+                    const factor = augmented[i][k] / augmented[k][k];
+                    
+                    if (Math.abs(factor) > 1e-10) {
+                        for (let j = k; j <= n; j++) {
+                            augmented[i][j] -= factor * augmented[k][j];
+                        }
+                        
+                        steps.push({
+                            title: `🔢 행 연산: R${i+1} ← R${i+1} - (${factor.toFixed(4)}) × R${k+1}`,
+                            description: `${i+1}번째 행의 ${k+1}번째 열 원소를 0으로 만듭니다. 승수(multiplier) m${i+1}${k+1} = a[${i+1}][${k+1}] / a[${k+1}][${k+1}] = ${augmented[i][k].toFixed(4)} / ${augmented[k][k].toFixed(4)} = ${factor.toFixed(4)}`,
+                            matrix: augmented.map(row => [...row]),
+                            highlightRow: i,
+                            pivotRow: k,
+                            pivotCol: k
+                        });
+                    }
+                }
+            }
+            
+            steps.push({
+                title: '✅ 상삼각 행렬 완성 (Upper Triangular Form)',
+                description: '전방 소거가 완료되었습니다. 대각선 아래의 모든 원소가 0이 되어 상삼각 행렬이 되었습니다. 이제 후방 대입을 시작합니다.',
+                matrix: augmented.map(row => [...row])
+            });
+            
+            // 후방 대입 (Back Substitution)
+            const x = new Array(n);
+            const backSteps = [];
+            
+            for (let i = n - 1; i >= 0; i--) {
+                let sum = 0;
+                let calculation = `I${i+1} = (b${i+1} `;
+                let calcDetail = `I${i+1} = (${augmented[i][n].toFixed(4)}`;
+                
+                for (let j = i + 1; j < n; j++) {
+                    sum += augmented[i][j] * x[j];
+                    if (Math.abs(augmented[i][j]) > 1e-10) {
+                        calculation += ` - a${i+1}${j+1}×I${j+1}`;
+                        calcDetail += ` - (${augmented[i][j].toFixed(4)}) × (${x[j].toFixed(6)})`;
+                    }
+                }
+                
+                x[i] = (augmented[i][n] - sum) / augmented[i][i];
+                calculation += `) / a${i+1}${i+1}`;
+                calcDetail += `) / ${augmented[i][i].toFixed(4)}`;
+                
+                backSteps.push({
+                    variable: `I${i+1}`,
+                    calculation: calculation,
+                    calcDetail: calcDetail,
+                    value: x[i],
+                    step: n - i
+                });
+            }
+            
+            return { steps, backSteps, solution: x };
+        }
+        
+        // 계산 함수
+        function calculate() {
+            // 입력값 가져오기
+            const E1 = parseFloat(document.getElementById('e1').value);
+            const E2 = parseFloat(document.getElementById('e2').value);
+            const E3 = parseFloat(document.getElementById('e3').value);
+            const E4 = parseFloat(document.getElementById('e4').value);
+            const R1 = parseFloat(document.getElementById('r1').value);
+            const R2 = parseFloat(document.getElementById('r2').value);
+            const R3 = parseFloat(document.getElementById('r3').value);
+            const R4 = parseFloat(document.getElementById('r4').value);
+            const R5 = parseFloat(document.getElementById('r5').value);
+            const R6 = parseFloat(document.getElementById('r6').value);
+            const R7 = parseFloat(document.getElementById('r7').value);
+            const R8 = parseFloat(document.getElementById('r8').value);
+            const R9 = parseFloat(document.getElementById('r9').value);
+            
+            // 키르히호프 전압 법칙 (KVL) 방정식
+            // Mesh 1: E1 - I1*R1 - (I1-I2)*R2 - (I1-I3)*R4 = 0
+            // 정리: I1*(R1+R2+R4) - I2*R2 - I3*R4 = E1
+            
+            // Mesh 2: -(I2-I1)*R2 - I2*R3 - (I2-I4)*R5 + E2 = 0
+            // 정리: -I1*R2 + I2*(R2+R3+R5) - I4*R5 = E2
+            
+            // Mesh 3: -(I3-I1)*R4 - I3*R6 - (I3-I4)*R7 + E3 = 0
+            // 정리: -I1*R4 + I3*(R4+R6+R7) - I4*R7 = E3
+            
+            // Mesh 4: -(I4-I2)*R5 - (I4-I3)*R7 - I4*R8 + E4 = 0
+            // 정리: -I2*R5 - I3*R7 + I4*(R5+R7+R8) = E4
+            
+            const A = [
+                [R1+R2+R4,  -R2,         -R4,         0],
+                [-R2,       R2+R3+R5,    0,          -R5],
+                [-R4,       0,           R4+R6+R7,   -R7],
+                [0,         -R5,         -R7,        R5+R7+R8]
+            ];
+            
+            const b = [E1, E2, E3, E4];
+            
+            // KVL 방정식 표시
+            let kvlHtml = '';
+            
+            kvlHtml += `<div class="equation">
+                <strong>Mesh 1 (좌상단):</strong><br>
+                KVL: E₁ - I₁×R₁ - (I₁-I₂)×R₂ - (I₁-I₃)×R₄ = 0<br>
+                전개: ${E1} - I₁×${R1} - I₁×${R2} + I₂×${R2} - I₁×${R4} + I₃×${R4} = 0<br>
+                정리: I₁×(${R1}+${R2}+${R4}) - I₂×${R2} - I₃×${R4} = ${E1}<br>
+                <strong style="color:#d32f2f;">${A[0][0].toFixed(2)}×I₁ ${A[0][1].toFixed(2)}×I₂ ${A[0][2].toFixed(2)}×I₃ + ${A[0][3].toFixed(2)}×I₄ = ${b[0].toFixed(2)}</strong>
+            </div>`;
+            
+            kvlHtml += `<div class="equation">
+                <strong>Mesh 2 (우상단):</strong><br>
+                KVL: -(I₂-I₁)×R₂ - I₂×R₃ - (I₂-I₄)×R₅ + E₂ = 0<br>
+                전개: -I₂×${R2} + I₁×${R2} - I₂×${R3} - I₂×${R5} + I₄×${R5} + ${E2} = 0<br>
+                정리: -I₁×${R2} + I₂×(${R2}+${R3}+${R5}) + 0×I₃ - I₄×${R5} = ${E2}<br>
+                <strong style="color:#d32f2f;">${A[1][0].toFixed(2)}×I₁ + ${A[1][1].toFixed(2)}×I₂ + ${A[1][2].toFixed(2)}×I₃ ${A[1][3].toFixed(2)}×I₄ = ${b[1].toFixed(2)}</strong>
+            </div>`;
+            
+            kvlHtml += `<div class="equation">
+                <strong>Mesh 3 (좌하단):</strong><br>
+                KVL: -(I₃-I₁)×R₄ - I₃×R₆ - (I₃-I₄)×R₇ + E₃ = 0<br>
+                전개: -I₃×${R4} + I₁×${R4} - I₃×${R6} - I₃×${R7} + I₄×${R7} + ${E3} = 0<br>
+                정리: -I₁×${R4} + 0×I₂ + I₃×(${R4}+${R6}+${R7}) - I₄×${R7} = ${E3}<br>
+                <strong style="color:#d32f2f;">${A[2][0].toFixed(2)}×I₁ + ${A[2][1].toFixed(2)}×I₂ + ${A[2][2].toFixed(2)}×I₃ ${A[2][3].toFixed(2)}×I₄ = ${b[2].toFixed(2)}</strong>
+            </div>`;
+            
+            kvlHtml += `<div class="equation">
+                <strong>Mesh 4 (우하단):</strong><br>
+                KVL: -(I₄-I₂)×R₅ - (I₄-I₃)×R₇ - I₄×R₈ + E₄ = 0<br>
+                전개: -I₄×${R5} + I₂×${R5} - I₄×${R7} + I₃×${R7} - I₄×${R8} + ${E4} = 0<br>
+                정리: 0×I₁ - I₂×${R5} - I₃×${R7} + I₄×(${R5}+${R7}+${R8}) = ${E4}<br>
+                <strong style="color:#d32f2f;">${A[3][0].toFixed(2)}×I₁ ${A[3][1].toFixed(2)}×I₂ ${A[3][2].toFixed(2)}×I₃ + ${A[3][3].toFixed(2)}×I₄ = ${b[3].toFixed(2)}</strong>
+            </div>`;
+            
+            document.getElementById('kvlEquations').innerHTML = kvlHtml;
+            
+            // 가우스 소거법 실행
+            const result = gaussianElimination(A, b);
+            
+            if (!result) {
+                alert('오류: 행렬이 특이 행렬입니다. 다른 값을 입력해주세요.');
+                return;
+            }
+            
+            // 가우스 소거법 단계 표시
+            let gaussHtml = '';
+            result.steps.forEach((step, index) => {
+                gaussHtml += `<div class="step">
+                    <div class="step-title">Step ${index}: ${step.title}</div>
+                    <div class="explanation">${step.description}</div>
+                    <div class="matrix-container">
+                        ${displayMatrix(step.matrix, step.highlightRow, step.highlightCol, step.pivotRow, step.pivotCol)}
+                    </div>
+                </div>`;
+            });
+            document.getElementById('gaussianSteps').innerHTML = gaussHtml;
+            
+            // 후방 대입 단계 표시
+            let backHtml = '';
+            result.backSteps.forEach((step, index) => {
+                backHtml += `<div class="step">
+                    <div class="step-title">Step ${step.step}: ${step.variable} 계산</div>
+                    <div class="equation">
+                        ${step.calculation}<br><br>
+                        ${step.calcDetail}<br><br>
+                        <strong style="color:#764ba2; font-size:15px;">${step.variable} = ${step.value.toFixed(6)} A</strong>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('backSubstitution').innerHTML = backHtml;
+            
+            // 최종 결과 표시
+            let finalHtml = '';
+            result.solution.forEach((current, index) => {
+                const direction = current >= 0 ? '시계방향 ↻' : '반시계방향 ↺';
+                const absValue = Math.abs(current).toFixed(6);
+                finalHtml += `<div class="result-item">
+                    <span class="result-label">메시 전류 I${index + 1}:</span>
+                    <span class="result-value">${current.toFixed(6)} A (${direction})</span>
+                </div>`;
+            });
+            
+            document.getElementById('finalCurrents').innerHTML = finalHtml;
+            
+            // 각 소자의 실제 전류 계산
+            const I1 = result.solution[0];
+            const I2 = result.solution[1];
+            const I3 = result.solution[2];
+            const I4 = result.solution[3];
+            
+            let branchHtml = '';
+            
+            branchHtml += `<div class="equation">
+                <strong>독립 저항 (단일 메시):</strong><br>
+                • R₁ 전류: I₁ = ${I1.toFixed(6)} A<br>
+                • R₃ 전류: I₂ = ${I2.toFixed(6)} A<br>
+                • R₆ 전류: I₃ = ${I3.toFixed(6)} A<br>
+                • R₈ 전류: I₄ = ${I4.toFixed(6)} A
+            </div>`;
+            
+            branchHtml += `<div class="equation">
+                <strong>공유 저항 (인접 메시 사이):</strong><br>
+                • R₂ 전류 (Mesh 1-2): I₁ - I₂ = ${I1.toFixed(6)} - (${I2.toFixed(6)}) = <strong>${(I1-I2).toFixed(6)} A</strong><br>
+                • R₄ 전류 (Mesh 1-3): I₁ - I₃ = ${I1.toFixed(6)} - (${I3.toFixed(6)}) = <strong>${(I1-I3).toFixed(6)} A</strong><br>
+                • R₅ 전류 (Mesh 2-4): I₂ - I₄ = ${I2.toFixed(6)} - (${I4.toFixed(6)}) = <strong>${(I2-I4).toFixed(6)} A</strong><br>
+                • R₇ 전류 (Mesh 3-4): I₃ - I₄ = ${I3.toFixed(6)} - (${I4.toFixed(6)}) = <strong>${(I3-I4).toFixed(6)} A</strong>
+            </div>`;
+            
+            // 전력 계산
+            branchHtml += `<div class="equation" style="background:#fff3cd; border-left-color:#ffc107;">
+                <strong>⚡ 각 저항에서 소비되는 전력 (P = I²R):</strong><br>
+                • P₁ = I₁²×R₁ = (${I1.toFixed(4)})² × ${R1} = <strong>${(I1*I1*R1).toFixed(4)} W</strong><br>
+                • P₂ = (I₁-I₂)²×R₂ = (${(I1-I2).toFixed(4)})² × ${R2} = <strong>${((I1-I2)*(I1-I2)*R2).toFixed(4)} W</strong><br>
+                • P₃ = I₂²×R₃ = (${I2.toFixed(4)})² × ${R3} = <strong>${(I2*I2*R3).toFixed(4)} W</strong><br>
+                • P₄ = (I₁-I₃)²×R₄ = (${(I1-I3).toFixed(4)})² × ${R4} = <strong>${((I1-I3)*(I1-I3)*R4).toFixed(4)} W</strong><br>
+                • P₅ = (I₂-I₄)²×R₅ = (${(I2-I4).toFixed(4)})² × ${R5} = <strong>${((I2-I4)*(I2-I4)*R5).toFixed(4)} W</strong><br>
+                • P₆ = I₃²×R₆ = (${I3.toFixed(4)})² × ${R6} = <strong>${(I3*I3*R6).toFixed(4)} W</strong><br>
+                • P₇ = (I₃-I₄)²×R₇ = (${(I3-I4).toFixed(4)})² × ${R7} = <strong>${((I3-I4)*(I3-I4)*R7).toFixed(4)} W</strong><br>
+                • P₈ = I₄²×R₈ = (${I4.toFixed(4)})² × ${R8} = <strong>${(I4*I4*R8).toFixed(4)} W</strong><br><br>
+                <strong style="color:#d32f2f; font-size:15px;">총 소비 전력 = ${(
+                    I1*I1*R1 + 
+                    (I1-I2)*(I1-I2)*R2 + 
+                    I2*I2*R3 + 
+                    (I1-I3)*(I1-I3)*R4 + 
+                    (I2-I4)*(I2-I4)*R5 + 
+                    I3*I3*R6 + 
+                    (I3-I4)*(I3-I4)*R7 + 
+                    I4*I4*R8
+                ).toFixed(4)} W</strong>
+            </div>`;
+            
+            document.getElementById('branchCurrents').innerHTML = branchHtml;
+            
+            // 결과 섹션 표시
+            document.getElementById('results').style.display = 'block';
+            
+            // 결과로 스크롤
+            setTimeout(() => {
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+        
+        // 페이지 로드 시 회로 그리기
+        window.addEventListener('load', drawCircuit);
+        window.addEventListener('resize', drawCircuit);
+        
+        // 입력값 변경 시 회로 다시 그리기
+        const inputs = ['e1', 'e2', 'e3', 'e4', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9'];
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', drawCircuit);
+            }
+        });
+    </script>
+</body>
+</html>

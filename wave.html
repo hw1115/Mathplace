@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회절 격자 시각화 - d sin θ = mλ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .formula {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            cursor: pointer;
+        }
+        
+        .value-display {
+            text-align: right;
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .visualization {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-box {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .info-box h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .info-box .value {
+            font-size: 1.3em;
+            color: #ffd700;
+        }
+        
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        
+        .legend h3 {
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .constructive { background: #00ff00; }
+        .destructive { background: #ff0000; }
+        .partial { background: #ffff00; }
+        
+        .intensity-graph {
+            margin-top: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .order-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+        
+        .order-info h4 {
+            color: #7b2cbf;
+            margin-bottom: 8px;
+        }
+        
+        .order-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .order-item {
+            padding: 5px;
+            margin: 3px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌈 회절 격자 시각화</h1>
+        <div class="formula">d sin θ = mλ</div>
+        
+        <div class="main-content">
+            <div class="controls">
+                <div class="control-group">
+                    <label>🔢 슬릿 개수 (N)</label>
+                    <input type="range" id="slitCount" min="2" max="20" value="5">
+                    <div class="value-display" id="slitCountValue">5개</div>
+                </div>
+                
+                <div class="control-group">
+                    <label>📏 슬릿 간격 d (μm)</label>
+                    <input type="range" id="slitSpacing" min="1" max="10" step="0.1" value="3">
+                    <div class="value-display" id="slitSpacingValue">3.0 μm</div>
+                </div>
+                
+                <div class="control-group">
+                    <label>🌊 파장 λ (nm)</label>
+                    <input type="range" id="wavelength" min="380" max="750" value="550">
+                    <div class="value-display" id="wavelengthValue">550 nm (녹색)</div>
+                </div>
+                
+                <div class="control-group">
+                    <label>📐 스크린 거리 L (cm)</label>
+                    <input type="range" id="screenDistance" min="10" max="100" value="50">
+                    <div class="value-display" id="screenDistanceValue">50 cm</div>
+                </div>
+                
+                <div class="control-group">
+                    <label>⏱️ 애니메이션 속도</label>
+                    <input type="range" id="animSpeed" min="0.1" max="3" step="0.1" value="1">
+                    <div class="value-display" id="animSpeedValue">1.0x</div>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="showWaves" checked> 파동 표시
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="showPaths" checked> 경로차 표시
+                    </label>
+                </div>
+                
+                <div class="legend">
+                    <h3>범례</h3>
+                    <div class="legend-item">
+                        <div class="legend-color constructive"></div>
+                        <span>보강 간섭 (밝은 무늬)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color destructive"></div>
+                        <span>상쇄 간섭 (어두운 무늬)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color partial"></div>
+                        <span>부분 간섭</span>
+                    </div>
+                </div>
+                
+                <div class="order-info">
+                    <h4>📊 회절 차수별 위치</h4>
+                    <div class="order-list" id="orderList"></div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="visualization">
+                    <canvas id="mainCanvas"></canvas>
+                </div>
+                
+                <div class="intensity-graph">
+                    <canvas id="intensityCanvas"></canvas>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="info-box">
+                        <h3>첫 번째 극대 각도 (m=1)</h3>
+                        <div class="value" id="firstMaxAngle">-</div>
+                    </div>
+                    <div class="info-box">
+                        <h3>첫 번째 극대 위치</h3>
+                        <div class="value" id="firstMaxPos">-</div>
+                    </div>
+                    <div class="info-box">
+                        <h3>최대 관측 가능 차수</h3>
+                        <div class="value" id="maxOrder">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas 설정
+        const mainCanvas = document.getElementById('mainCanvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        const intensityCanvas = document.getElementById('intensityCanvas');
+        const intensityCtx = intensityCanvas.getContext('2d');
+        
+        // Canvas 크기 설정
+        function resizeCanvases() {
+            const container = document.querySelector('.visualization');
+            mainCanvas.width = container.clientWidth;
+            mainCanvas.height = 500;
+            intensityCanvas.width = container.clientWidth;
+            intensityCanvas.height = 150;
+        }
+        resizeCanvases();
+        window.addEventListener('resize', resizeCanvases);
+        
+        // 파라미터
+        let params = {
+            slitCount: 5,
+            slitSpacing: 3, // μm
+            wavelength: 550, // nm
+            screenDistance: 50, // cm
+            animSpeed: 1,
+            showWaves: true,
+            showPaths: true
+        };
+        
+        let time = 0;
+        
+        // 파장에 따른 색상
+        function wavelengthToColor(wavelength, alpha = 1) {
+            let r, g, b;
+            if (wavelength >= 380 && wavelength < 440) {
+                r = -(wavelength - 440) / (440 - 380);
+                g = 0;
+                b = 1;
+            } else if (wavelength >= 440 && wavelength < 490) {
+                r = 0;
+                g = (wavelength - 440) / (490 - 440);
+                b = 1;
+            } else if (wavelength >= 490 && wavelength < 510) {
+                r = 0;
+                g = 1;
+                b = -(wavelength - 510) / (510 - 490);
+            } else if (wavelength >= 510 && wavelength < 580) {
+                r = (wavelength - 510) / (580 - 510);
+                g = 1;
+                b = 0;
+            } else if (wavelength >= 580 && wavelength < 645) {
+                r = 1;
+                g = -(wavelength - 645) / (645 - 580);
+                b = 0;
+            } else if (wavelength >= 645 && wavelength <= 750) {
+                r = 1;
+                g = 0;
+                b = 0;
+            } else {
+                r = 0; g = 0; b = 0;
+            }
+            
+            return `rgba(${Math.round(r*255)}, ${Math.round(g*255)}, ${Math.round(b*255)}, ${alpha})`;
+        }
+        
+        // 파장 이름
+        function getWavelengthName(wavelength) {
+            if (wavelength < 450) return '보라색';
+            if (wavelength < 495) return '파란색';
+            if (wavelength < 570) return '녹색';
+            if (wavelength < 590) return '노란색';
+            if (wavelength < 620) return '주황색';
+            return '빨간색';
+        }
+        
+        // 회절 격자 강도 계산
+        function calculateIntensity(theta, N, d, lambda) {
+            const k = 2 * Math.PI / (lambda * 1e-9);
+            const dMeters = d * 1e-6;
+            const beta = k * dMeters * Math.sin(theta) / 2;
+            
+            if (Math.abs(beta) < 1e-10) return N * N;
+            
+            const intensity = Math.pow(Math.sin(N * beta) / Math.sin(beta), 2);
+            return Math.min(intensity, N * N);
+        }
+        
+        // 메인 캔버스 그리기
+        function drawMainCanvas() {
+            const width = mainCanvas.width;
+            const height = mainCanvas.height;
+            
+            // 배경
+            mainCtx.fillStyle = '#0a0a1a';
+            mainCtx.fillRect(0, 0, width, height);
+            
+            const gratingX = 150;
+            const screenX = width - 100;
+            const centerY = height / 2;
+            
+            // 격자 간격 시각화 스케일
+            const visualSlitSpacing = Math.min(40, 300 / params.slitCount);
+            const slitPositions = [];
+            
+            for (let i = 0; i < params.slitCount; i++) {
+                const y = centerY + (i - (params.slitCount - 1) / 2) * visualSlitSpacing;
+                slitPositions.push(y);
+            }
+            
+            // 격자판 그리기
+            mainCtx.fillStyle = '#333';
+            mainCtx.fillRect(gratingX - 10, centerY - params.slitCount * visualSlitSpacing / 2 - 50, 20, params.slitCount * visualSlitSpacing + 100);
+            
+            // 슬릿 그리기
+            slitPositions.forEach((y, i) => {
+                mainCtx.fillStyle = wavelengthToColor(params.wavelength);
+                mainCtx.fillRect(gratingX - 5, y - 3, 10, 6);
+                
+                // 슬릿 번호
+                mainCtx.fillStyle = '#888';
+                mainCtx.font = '10px Arial';
+                mainCtx.fillText(`${i + 1}`, gratingX - 25, y + 3);
+            });
+            
+            // 파동 그리기
+            if (params.showWaves) {
+                const lambda = params.wavelength / 50; // 시각화용 파장
+                const waveColor = wavelengthToColor(params.wavelength);
+                
+                slitPositions.forEach((slitY) => {
+                    for (let angle = -Math.PI / 3; angle <= Math.PI / 3; angle += 0.02) {
+                        const maxDist = screenX - gratingX;
+                        
+                        for (let dist = 0; dist < maxDist; dist += 2) {
+                            const x = gratingX + dist * Math.cos(angle);
+                            const y = slitY + dist * Math.sin(angle);
+                            
+                            if (x > screenX || y < 0 || y > height) continue;
+                            
+                            const phase = (dist - time * 3 * params.animSpeed) / lambda;
+                            const amplitude = Math.sin(phase * 2 * Math.PI);
+                            const alpha = (0.3 + 0.2 * amplitude) * (1 - dist / maxDist) * 0.5;
+                            
+                            mainCtx.fillStyle = wavelengthToColor(params.wavelength, Math.max(0, alpha));
+                            mainCtx.fillRect(x, y, 2, 2);
+                        }
+                    }
+                });
+            }
+            
+            // 스크린 그리기
+            mainCtx.fillStyle = '#222';
+            mainCtx.fillRect(screenX, 0, 80, height);
+            
+            // 스크린 위의 간섭 무늬
+            const dMeters = params.slitSpacing * 1e-6;
+            const lambdaMeters = params.wavelength * 1e-9;
+            const L = params.screenDistance / 100; // cm to m
+            
+            for (let py = 0; py < height; py++) {
+                const screenY = (py - centerY) / (height / 2) * 0.05; // 스크린상 위치 (m 단위로 스케일)
+                const theta = Math.atan(screenY / L);
+                
+                const intensity = calculateIntensity(theta, params.slitCount, params.slitSpacing, params.wavelength);
+                const normalizedIntensity = intensity / (params.slitCount * params.slitCount);
+                
+                const color = wavelengthToColor(params.wavelength, normalizedIntensity);
+                mainCtx.fillStyle = color;
+                mainCtx.fillRect(screenX, py, 80, 1);
+            }
+            
+            // 경로차 표시
+            if (params.showPaths && slitPositions.length >= 2) {
+                // 첫 번째 차수 극대 위치로 경로 표시
+                const sinTheta = lambdaMeters / dMeters;
+                if (sinTheta <= 1) {
+                    const theta = Math.asin(sinTheta);
+                    const screenYPos = centerY - Math.tan(theta) * (screenX - gratingX) * 0.3;
+                    
+                    if (screenYPos > 50 && screenYPos < height - 50) {
+                        mainCtx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                        mainCtx.lineWidth = 2;
+                        mainCtx.setLineDash([5, 5]);
+                        
+                        // 두 슬릿에서 같은 점으로 가는 경로
+                        const slit1Y = slitPositions[0];
+                        const slit2Y = slitPositions[1];
+                        
+                        mainCtx.beginPath();
+                        mainCtx.moveTo(gratingX, slit1Y);
+                        mainCtx.lineTo(screenX, screenYPos);
+                        mainCtx.stroke();
+                        
+                        mainCtx.beginPath();
+                        mainCtx.moveTo(gratingX, slit2Y);
+                        mainCtx.lineTo(screenX, screenYPos);
+                        mainCtx.stroke();
+                        
+                        mainCtx.setLineDash([]);
+                        
+                        // 경로차 표시
+                        mainCtx.fillStyle = '#ffff00';
+                        mainCtx.font = '12px Arial';
+                        mainCtx.fillText('m=1 (보강)', screenX + 5, screenYPos - 10);
+                        mainCtx.fillText(`경로차 = λ`, screenX + 5, screenYPos + 15);
+                    }
+                }
+            }
+            
+            // 레이블
+            mainCtx.fillStyle = '#fff';
+            mainCtx.font = '14px Arial';
+            mainCtx.fillText('입사광', 20, 30);
+            mainCtx.fillText('회절격자', gratingX - 25, 30);
+            mainCtx.fillText('스크린', screenX + 10, 30);
+            
+            // 격자 상수 표시
+            if (slitPositions.length >= 2) {
+                mainCtx.strokeStyle = '#00d4ff';
+                mainCtx.lineWidth = 1;
+                mainCtx.beginPath();
+                mainCtx.moveTo(gratingX + 30, slitPositions[0]);
+                mainCtx.lineTo(gratingX + 30, slitPositions[1]);
+                mainCtx.stroke();
+                
+                mainCtx.beginPath();
+                mainCtx.moveTo(gratingX + 25, slitPositions[0]);
+                mainCtx.lineTo(gratingX + 35, slitPositions[0]);
+                mainCtx.stroke();
+                
+                mainCtx.beginPath();
+                mainCtx.moveTo(gratingX + 25, slitPositions[1]);
+                mainCtx.lineTo(gratingX + 35, slitPositions[1]);
+                mainCtx.stroke();
+                
+                mainCtx.fillStyle = '#00d4ff';
+                mainCtx.font = '12px Arial';
+                mainCtx.fillText('d', gratingX + 40, (slitPositions[0] + slitPositions[1]) / 2 + 4);
+            }
+            
+            // 입사 파동 화살표
+            mainCtx.strokeStyle = wavelengthToColor(params.wavelength);
+            mainCtx.lineWidth = 3;
+            for (let i = 0; i < 5; i++) {
+                const x = 50 + ((time * params.animSpeed * 20 + i * 30) % 80);
+                mainCtx.beginPath();
+                mainCtx.moveTo(x, centerY);
+                mainCtx.lineTo(x + 15, centerY);
+                mainCtx.stroke();
+                
+                mainCtx.beginPath();
+                mainCtx.moveTo(x + 15, centerY);
+                mainCtx.lineTo(x + 10, centerY - 5);
+                mainCtx.lineTo(x + 10, centerY + 5);
+                mainCtx.closePath();
+                mainCtx.fillStyle = wavelengthToColor(params.wavelength);
+                mainCtx.fill();
+            }
+        }
+        
+        // 강도 그래프 그리기
+        function drawIntensityGraph() {
+            const width = intensityCanvas.width;
+            const height = intensityCanvas.height;
+            
+            // 배경
+            intensityCtx.fillStyle = '#0a0a1a';
+            intensityCtx.fillRect(0, 0, width, height);
+            
+            // 그리드
+            intensityCtx.strokeStyle = '#333';
+            intensityCtx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = (i / 10) * width;
+                intensityCtx.beginPath();
+                intensityCtx.moveTo(x, 0);
+                intensityCtx.lineTo(x, height);
+                intensityCtx.stroke();
+            }
+            
+            // 강도 그래프
+            const dMeters = params.slitSpacing * 1e-6;
+            const lambdaMeters = params.wavelength * 1e-9;
+            const maxOrder = Math.floor(dMeters / lambdaMeters);
+            
+            intensityCtx.beginPath();
+            intensityCtx.strokeStyle = wavelengthToColor(params.wavelength);
+            intensityCtx.lineWidth = 2;
+            
+            const maxIntensity = params.slitCount * params.slitCount;
+            
+            for (let px = 0; px < width; px++) {
+                const theta = ((px / width) - 0.5) * Math.PI / 3; // -30° to +30°
+                const intensity = calculateIntensity(theta, params.slitCount, params.slitSpacing, params.wavelength);
+                const normalizedIntensity = intensity / maxIntensity;
+                
+                const y = height - normalizedIntensity * (height - 20) - 10;
+                
+                if (px === 0) {
+                    intensityCtx.moveTo(px, y);
+                } else {
+                    intensityCtx.lineTo(px, y);
+                }
+            }
+            intensityCtx.stroke();
+            
+            // 채우기
+            intensityCtx.lineTo(width, height);
+            intensityCtx.lineTo(0, height);
+            intensityCtx.closePath();
+            intensityCtx.fillStyle = wavelengthToColor(params.wavelength, 0.3);
+            intensityCtx.fill();
+            
+            // 극대 위치 표시
+            for (let m = -maxOrder; m <= maxOrder; m++) {
+                const sinTheta = m * lambdaMeters / dMeters;
+                if (Math.abs(sinTheta) <= 1) {
+                    const theta = Math.asin(sinTheta);
+                    const px = (theta / (Math.PI / 3) + 0.5) * width;
+                    
+                    if (px >= 0 && px <= width) {
+                        intensityCtx.fillStyle = m === 0 ? '#ffffff' : '#00ff00';
+                        intensityCtx.beginPath();
+                        intensityCtx.arc(px, 15, 5, 0, Math.PI * 2);
+                        intensityCtx.fill();
+                        
+                        intensityCtx.fillStyle = '#fff';
+                        intensityCtx.font = '10px Arial';
+                        intensityCtx.textAlign = 'center';
+                        intensityCtx.fillText(`m=${m}`, px, 30);
+                    }
+                }
+            }
+            
+            // 축 레이블
+            intensityCtx.fillStyle = '#888';
+            intensityCtx.font = '12px Arial';
+            intensityCtx.textAlign = 'left';
+            intensityCtx.fillText('강도 I', 10, 15);
+            intensityCtx.textAlign = 'center';
+            intensityCtx.fillText('-30°', 10, height - 5);
+            intensityCtx.fillText('0°', width / 2, height - 5);
+            intensityCtx.fillText('+30°', width - 20, height - 5);
+            intensityCtx.fillText('θ (회절각)', width / 2, height - 5);
+        }
+        
+        // 정보 업데이트
+        function updateInfo() {
+            const dMeters = params.slitSpacing * 1e-6;
+            const lambdaMeters = params.wavelength * 1e-9;
+            const L = params.screenDistance / 100;
+            
+            // 첫 번째 극대 각도
+            const sinTheta1 = lambdaMeters / dMeters;
+            if (sinTheta1 <= 1) {
+                const theta1 = Math.asin(sinTheta1) * 180 / Math.PI;
+                document.getElementById('firstMaxAngle').textContent = theta1.toFixed(2) + '°';
+                
+                // 첫 번째 극대 위치
+                const y1 = L * Math.tan(theta1 * Math.PI / 180) * 100; // cm
+                document.getElementById('firstMaxPos').textContent = y1.toFixed(2) + ' cm';
+            } else {
+                document.getElementById('firstMaxAngle').textContent = '관측 불가';
+                document.getElementById('firstMaxPos').textContent = '-';
+            }
+            
+            // 최대 차수
+            const maxOrder = Math.floor(dMeters / lambdaMeters);
+            document.getElementById('maxOrder').textContent = `±${maxOrder}`;
+            
+            // 차수별 위치 목록
+            const orderList = document.getElementById('orderList');
+            orderList.innerHTML = '';
+            
+            for (let m = -maxOrder; m <= maxOrder; m++) {
+                const sinTheta = m * lambdaMeters / dMeters;
+                if (Math.abs(sinTheta) <= 1) {
+                    const theta = Math.asin(sinTheta);
+                    const y = L * Math.tan(theta) * 100; // cm
+                    
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    div.innerHTML = `
+                        <span>m = ${m >= 0 ? '+' : ''}${m}</span>
+                        <span>θ = ${(theta * 180 / Math.PI).toFixed(1)}°</span>
+                        <span>y = ${y.toFixed(2)} cm</span>
+                    `;
+                    orderList.appendChild(div);
+                }
+            }
+        }
+        
+        // 컨트롤 이벤트
+        function setupControls() {
+            document.getElementById('slitCount').addEventListener('input', (e) => {
+                params.slitCount = parseInt(e.target.value);
+                document.getElementById('slitCountValue').textContent = params.slitCount + '개';
+                updateInfo();
+            });
+            
+            document.getElementById('slitSpacing').addEventListener('input', (e) => {
+                params.slitSpacing = parseFloat(e.target.value);
+                document.getElementById('slitSpacingValue').textContent = params.slitSpacing.toFixed(1) + ' μm';
+                updateInfo();
+            });
+            
+            document.getElementById('wavelength').addEventListener('input', (e) => {
+                params.wavelength = parseInt(e.target.value);
+                document.getElementById('wavelengthValue').textContent = 
+                    params.wavelength + ' nm (' + getWavelengthName(params.wavelength) + ')';
+                updateInfo();
+            });
+            
+            document.getElementById('screenDistance').addEventListener('input', (e) => {
+                params.screenDistance = parseInt(e.target.value);
+                document.getElementById('screenDistanceValue').textContent = params.screenDistance + ' cm';
+                updateInfo();
+            });
+            
+            document.getElementById('animSpeed').addEventListener('input', (e) => {
+                params.animSpeed = parseFloat(e.target.value);
+                document.getElementById('animSpeedValue').textContent = params.animSpeed.toFixed(1) + 'x';
+            });
+            
+            document.getElementById('showWaves').addEventListener('change', (e) => {
+                params.showWaves = e.target.checked;
+            });
+            
+            document.getElementById('showPaths').addEventListener('change', (e) => {
+                params.showPaths = e.target.checked;
+            });
+        }
+        
+        // 애니메이션 루프
+        function animate() {
+            time += 0.016;
+            drawMainCanvas();
+            drawIntensityGraph();
+            requestAnimationFrame(animate);
+        }
+        
+        // 초기화
+        setupControls();
+        updateInfo();
+        animate();
+    </script>
+</body>
+</html>

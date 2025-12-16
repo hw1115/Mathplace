@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>불균일 밀도 물체의 질량중심 계산기</title>
+    
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Plotly for graphs -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-light: rgba(52, 152, 219, 0.3);
+            --secondary-color: #e74c3c;
+            --secondary-light: rgba(231, 76, 60, 0.3);
+            --success-color: #2ecc71;
+            --success-light: rgba(46, 204, 113, 0.5);
+            --gray-color: #95a5a6;
+            --dark-color: #2c3e50;
+            --background-color: #f8f9fa;
+            --panel-color: #ffffff;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            gap: 2rem;
+        }
+
+        /* Panel Styles */
+        .panel {
+            background: var(--panel-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .panel:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--background-color);
+        }
+
+        .panel-header h2 {
+            font-size: 1.25rem;
+            color: var(--dark-color);
+        }
+
+        .panel-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Top Section Layout */
+        .top-section {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1000px) {
+            .top-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Control Panel Styles */
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark-color);
+        }
+
+        .control-group select,
+        .control-group input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        /* Slider Styles */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Formula Display */
+        .formula-display {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        /* Graph Container */
+        .graphs-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 800px) {
+            .graphs-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .graph-wrapper {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .graph-title {
+            text-align: center;
+            font-weight: 600;
+            padding: 0.5rem;
+            color: var(--dark-color);
+        }
+
+        /* Rod Visualization */
+        .rod-visualization {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .rod-container {
+            position: relative;
+            height: 80px;
+            margin: 1rem 0;
+        }
+
+        .rod {
+            position: absolute;
+            top: 30px;
+            left: 50px;
+            right: 50px;
+            height: 30px;
+            border-radius: 4px;
+            background: linear-gradient(to right, var(--primary-light), var(--primary-color));
+        }
+
+        .rod-marker {
+            position: absolute;
+            top: 0;
+            width: 3px;
+            height: 70px;
+            transform: translateX(-50%);
+        }
+
+        .rod-marker.center-of-mass {
+            background: var(--secondary-color);
+        }
+
+        .rod-marker.geometric-center {
+            background: var(--gray-color);
+            border-style: dashed;
+        }
+
+        .rod-marker-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .rod-marker-triangle {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 15px solid var(--secondary-color);
+        }
+
+        /* Riemann Section */
+        .riemann-section {
+            margin-top: 2rem;
+        }
+
+        .riemann-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        .btn-secondary {
+            background: var(--gray-color);
+            color: white;
+        }
+
+        /* Results Display */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .result-card.highlight {
+            border-color: var(--secondary-color);
+            background: linear-gradient(135deg, #fff5f5, #ffffff);
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--gray-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .result-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+
+        .result-value.primary {
+            color: var(--primary-color);
+        }
+
+        .result-value.secondary {
+            color: var(--secondary-color);
+        }
+
+        .result-subtitle {
+            font-size: 0.75rem;
+            color: var(--gray-color);
+            margin-top: 0.25rem;
+        }
+
+        /* Calculation Steps */
+        .calculation-steps {
+            margin-top: 2rem;
+        }
+
+        .steps-toggle {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: 2px solid #e0e0e0;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .steps-toggle:hover {
+            border-color: var(--primary-color);
+        }
+
+        .steps-content {
+            display: none;
+            padding: 1.5rem;
+            border: 2px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: #fafafa;
+        }
+
+        .steps-content.active {
+            display: block;
+        }
+
+        .step {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-formula {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 0.5rem;
+            overflow-x: auto;
+        }
+
+        /* Comparison Section */
+        .comparison-section {
+            margin-top: 2rem;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .preset-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .preset-btn:hover {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .preset-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 0.75rem;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .comparison-table th {
+            background: var(--dark-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Balance Simulation */
+        .balance-section {
+            margin-top: 2rem;
+        }
+
+        .balance-container {
+            position: relative;
+            height: 200px;
+            background: linear-gradient(to bottom, #e8f4fc, #ffffff);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .balance-rod {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            width: 300px;
+            height: 20px;
+            background: linear-gradient(to right, var(--primary-light), var(--primary-color));
+            border-radius: 4px;
+            transform-origin: center center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.3s ease;
+        }
+
+        .balance-pivot {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid var(--dark-color);
+            cursor: ew-resize;
+        }
+
+        .balance-message {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            transition: var(--transition);
+        }
+
+        .balance-message.balanced {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .balance-message.unbalanced {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        /* Error Display */
+        .error-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #fff3cd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .error-bar {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .error-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-color);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .riemann-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>🎯 불균일 밀도 물체의 질량중심 계산기</h1>
+        <p>적분의 원리를 인터랙티브하게 탐구하기</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Top Section: Controls + Main Graph -->
+        <section class="top-section">
+            <!-- Control Panel -->
+            <div class="panel" id="control-panel">
+                <div class="panel-header">
+                    <span class="panel-icon">⚙️</span>
+                    <h2>밀도 함수 설정</h2>
+                </div>
+
+                <div class="control-group">
+                    <label for="density-type">밀도 함수 유형</label>
+                    <select id="density-type">
+                        <option value="uniform">균일: ρ(x) = c</option>
+                        <option value="linear-increase">선형 증가: ρ(x) = a + bx</option>
+                        <option value="linear-decrease">선형 감소: ρ(x) = a - bx</option>
+                        <option value="quadratic" selected>이차: ρ(x) = a + bx²</option>
+                        <option value="sine">사인파: ρ(x) = a + b·sin(πx)</option>
+                        <option value="exponential">지수: ρ(x) = e^(ax)</option>
+                    </select>
+                </div>
+
+                <div class="control-group" id="param-a-group">
+                    <label>파라미터 a</label>
+                    <div class="slider-container">
+                        <input type="range" id="param-a" min="0" max="5" step="0.1" value="1">
+                        <span class="slider-value" id="param-a-value">1.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group" id="param-b-group">
+                    <label>파라미터 b</label>
+                    <div class="slider-container">
+                        <input type="range" id="param-b" min="-2" max="5" step="0.1" value="1">
+                        <span class="slider-value" id="param-b-value">1.0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>구간 [a, b]</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <input type="number" id="interval-start" value="0" step="0.1" placeholder="시작점">
+                        <input type="number" id="interval-end" value="1" step="0.1" placeholder="끝점">
+                    </div>
+                </div>
+
+                <div class="formula-display" id="formula-display">
+                    $\rho(x) = 1 + x^2$
+                </div>
+                <div id="density-warning" style="display: none; color: #e74c3c; font-size: 0.85rem; margin-top: 0.5rem;">
+                    ⚠️ 주의: 일부 구간에서 밀도가 음수입니다. 파라미터를 조정해주세요.
+                </div>
+            </div>
+
+            <!-- Main Visualization -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-icon">📊</span>
+                    <h2>시각화</h2>
+                </div>
+
+                <div class="graphs-container">
+                    <div class="graph-wrapper">
+                        <div class="graph-title">밀도 함수 ρ(x)</div>
+                        <div id="density-graph"></div>
+                    </div>
+                    <div class="graph-wrapper">
+                        <div class="graph-title">가중 함수 x·ρ(x)</div>
+                        <div id="moment-graph"></div>
+                    </div>
+                </div>
+
+                <!-- Rod Visualization -->
+                <div class="rod-visualization">
+                    <h3 style="margin-bottom: 0.5rem;">막대 시각화</h3>
+                    <div class="rod-container" id="rod-container">
+                        <div class="rod" id="rod"></div>
+                        <div class="rod-marker geometric-center" id="geometric-marker">
+                            <span class="rod-marker-label" style="color: var(--gray-color);">기하중심</span>
+                        </div>
+                        <div class="rod-marker center-of-mass" id="com-marker">
+                            <span class="rod-marker-label" style="color: var(--secondary-color);">질량중심</span>
+                            <div class="rod-marker-triangle"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Riemann Sum Section -->
+        <section class="panel riemann-section">
+            <div class="panel-header">
+                <span class="panel-icon">📐</span>
+                <h2>리만 합 탐구</h2>
+            </div>
+
+            <div class="riemann-controls">
+                <div style="flex: 1; min-width: 200px;">
+                    <label>분할 수 n</label>
+                    <div class="slider-container">
+                        <input type="range" id="riemann-n" min="1" max="100" value="10">
+                        <span class="slider-value" id="riemann-n-value">10</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="play-btn" onclick="RiemannAnimator.toggle()">
+                    <span id="play-icon">▶</span> 재생
+                </button>
+                <button class="btn btn-secondary" onclick="RiemannAnimator.reset()">
+                    ↺ 초기화
+                </button>
+            </div>
+
+            <div id="riemann-graph"></div>
+
+            <!-- Results Grid -->
+            <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-label">전체 질량 M (리만 합)</div>
+                    <div class="result-value primary" id="mass-riemann">-</div>
+                    <div class="result-subtitle">$\sum \rho(x_i) \Delta x$</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">전체 질량 M (정적분)</div>
+                    <div class="result-value" id="mass-exact">-</div>
+                    <div class="result-subtitle">$\int \rho(x) dx$</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">1차 모멘트 M₀ (리만 합)</div>
+                    <div class="result-value primary" id="moment-riemann">-</div>
+                    <div class="result-subtitle">$\sum x_i \rho(x_i) \Delta x$</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">1차 모멘트 M₀ (정적분)</div>
+                    <div class="result-value" id="moment-exact">-</div>
+                    <div class="result-subtitle">$\int x \rho(x) dx$</div>
+                </div>
+                <div class="result-card highlight">
+                    <div class="result-label">질량중심 x̄ (근사)</div>
+                    <div class="result-value secondary" id="com-riemann">-</div>
+                    <div class="result-subtitle">리만 합 기반</div>
+                </div>
+                <div class="result-card highlight">
+                    <div class="result-label">질량중심 x̄ (정확)</div>
+                    <div class="result-value secondary" id="com-exact">-</div>
+                    <div class="result-subtitle">$M_0 / M$</div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div style="margin-top: 1rem;">
+                <div class="error-display">
+                    <span>정확도:</span>
+                    <div class="error-bar">
+                        <div class="error-fill" id="accuracy-bar" style="width: 0%"></div>
+                    </div>
+                    <span id="accuracy-value">0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calculation Steps Section -->
+        <section class="panel calculation-steps">
+            <button class="steps-toggle" onclick="CalculationSteps.toggle()">
+                <span>📝 계산 과정 상세 보기</span>
+                <span id="steps-arrow">▼</span>
+            </button>
+            <div class="steps-content" id="steps-content">
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        문제 정의
+                    </div>
+                    <p>구간 $[a, b]$에서 밀도 함수 $\rho(x)$가 주어졌을 때, 질량중심 $\bar{x}$를 구합니다.</p>
+                    <div class="step-formula" id="step1-formula">
+                        $$\bar{x} = \frac{\int_a^b x \cdot \rho(x) \, dx}{\int_a^b \rho(x) \, dx} = \frac{M_0}{M}$$
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        전체 질량 계산
+                    </div>
+                    <div class="step-formula" id="step2-formula">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        1차 모멘트 계산
+                    </div>
+                    <div class="step-formula" id="step3-formula">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        질량중심 계산
+                    </div>
+                    <div class="step-formula" id="step4-formula">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section class="panel comparison-section">
+            <div class="panel-header">
+                <span class="panel-icon">📋</span>
+                <h2>밀도 함수 비교</h2>
+            </div>
+
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="ComparisonManager.applyPreset('uniform')">균일 밀도</button>
+                <button class="preset-btn" onclick="ComparisonManager.applyPreset('left-heavy')">왼쪽 무거움</button>
+                <button class="preset-btn" onclick="ComparisonManager.applyPreset('right-heavy')">오른쪽 무거움</button>
+                <button class="preset-btn" onclick="ComparisonManager.applyPreset('center-heavy')">중앙 무거움</button>
+                <button class="preset-btn" onclick="ComparisonManager.applyPreset('edges-heavy')">양끝 무거움</button>
+            </div>
+
+            <div id="comparison-graph"></div>
+
+            <table class="comparison-table" id="comparison-table">
+                <thead>
+                    <tr>
+                        <th>밀도 함수</th>
+                        <th>전체 질량 M</th>
+                        <th>1차 모멘트 M₀</th>
+                        <th>질량중심 x̄</th>
+                        <th>기하중심과의 차이</th>
+                    </tr>
+                </thead>
+                <tbody id="comparison-tbody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Balance Simulation Section -->
+        <section class="panel balance-section">
+            <div class="panel-header">
+                <span class="panel-icon">⚖️</span>
+                <h2>균형 시뮬레이션</h2>
+            </div>
+            <p style="margin-bottom: 1rem; color: var(--gray-color);">
+                삼각형 받침대를 드래그하여 막대의 균형점을 찾아보세요. 질량중심에서만 균형이 잡힙니다!
+            </p>
+            <div class="balance-container" id="balance-container">
+                <div class="balance-rod" id="balance-rod"></div>
+                <div class="balance-pivot" id="balance-pivot"></div>
+                <div class="balance-message" id="balance-message">드래그하여 균형점 찾기</div>
+            </div>
+            <div style="margin-top: 1rem; text-align: center;">
+                <span>받침점 위치: </span>
+                <strong id="pivot-position">0.500</strong>
+                <span> | 질량중심: </span>
+                <strong id="balance-com">0.563</strong>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>적분을 활용한 질량중심 계산 시뮬레이터 | 수학 탐구 보고서</p>
+    </footer>
+
+    <script>
+        // ============================================================
+        // SOLID 원칙 적용: 모듈화된 JavaScript 구조
+        // S: Single Responsibility - 각 클래스/모듈은 하나의 책임만 가짐
+        // O: Open/Closed - 확장에 열려있고, 수정에 닫혀있음
+        // L: Liskov Substitution - 밀도 함수들이 같은 인터페이스 준수
+        // I: Interface Segregation - 필요한 인터페이스만 노출
+        // D: Dependency Inversion - 추상화에 의존
+        // ============================================================
+
+        // ============================================================
+        // 1. 밀도 함수 모듈 (Single Responsibility: 밀도 함수 정의만 담당)
+        // ============================================================
+        const DensityFunctions = {
+        uniform: {
+            fn: (x, { a }) => Math.max(0.01, a),
+            latex: (a, b) => `\\rho(x) = ${a.toFixed(1)}`,
+            name: '균일'
+        },
+        'linear-increase': {
+            fn: (x, { a, b }) => Math.max(0.01, a + b * x),
+            latex: (a, b) => `\\rho(x) = ${a.toFixed(1)} + ${b.toFixed(1)}x`,
+            name: '선형 증가'
+        },
+        'linear-decrease': {
+            fn: (x, { a, b, intervalEnd }) => {
+                // 구간 끝에서도 양수가 되도록 보정
+                const value = a - b * x;
+                return Math.max(0.01, value);
+            },
+            latex: (a, b) => `\\rho(x) = ${a.toFixed(1)} - ${b.toFixed(1)}x`,
+            name: '선형 감소'
+        },
+        quadratic: {
+            fn: (x, { a, b }) => Math.max(0.01, a + b * x * x),
+            latex: (a, b) => `\\rho(x) = ${a.toFixed(1)} + ${b.toFixed(1)}x^2`,
+            name: '이차'
+        },
+        sine: {
+            // a > b 조건으로 항상 양수 보장
+            fn: (x, { a, b }) => Math.max(0.01, a + b * Math.sin(Math.PI * x)),
+            latex: (a, b) => `\\rho(x) = ${a.toFixed(1)} + ${b.toFixed(1)}\\sin(\\pi x)`,
+            name: '사인파'
+        },
+        exponential: {
+            // 지수함수는 항상 양수
+            fn: (x, { a }) => Math.exp(a * x),
+            latex: (a, b) => `\\rho(x) = e^{${a.toFixed(1)}x}`,
+            name: '지수'
+        }
+    };
+        // ============================================================
+        // 2. 수치 적분 모듈 (Single Responsibility: 수치 계산만 담당)
+        // ============================================================
+        const NumericalIntegration = {
+            // 리만 합 (왼쪽 끝점)
+            riemannSum(f, a, b, n) {
+                const dx = (b - a) / n;
+                let sum = 0;
+                for (let i = 0; i < n; i++) {
+                    sum += f(a + i * dx) * dx;
+                }
+                return sum;
+            },
+
+            // 리만 합 데이터 (시각화용)
+            riemannSumData(f, a, b, n) {
+                const dx = (b - a) / n;
+                const bars = [];
+                for (let i = 0; i < n; i++) {
+                    const x = a + i * dx;
+                    bars.push({ x, width: dx, height: f(x) });
+                }
+                return bars;
+            },
+
+            // Simpson 법칙 (더 정확한 수치 적분)
+            simpson(f, a, b, n = 1000) {
+                if (n % 2 !== 0) n++;
+                const h = (b - a) / n;
+                let sum = f(a) + f(b);
+                
+                for (let i = 1; i < n; i++) {
+                    const x = a + i * h;
+                    sum += (i % 2 === 0 ? 2 : 4) * f(x);
+                }
+                
+                return (h / 3) * sum;
+            },
+
+            // 질량중심 계산
+            centerOfMass(rho, a, b, n = 1000) {
+                const mass = this.simpson(rho, a, b, n);
+                const moment = this.simpson(x => x * rho(x), a, b, n);
+                return {
+                    mass,
+                    moment,
+                    centerOfMass: moment / mass
+                };
+            },
+
+            // 리만 합으로 질량중심 계산
+            centerOfMassRiemann(rho, a, b, n) {
+                const mass = this.riemannSum(rho, a, b, n);
+                const moment = this.riemannSum(x => x * rho(x), a, b, n);
+                return {
+                    mass,
+                    moment,
+                    centerOfMass: moment / mass
+                };
+            }
+        };
+
+        // ============================================================
+        // 3. 상태 관리 모듈 (Single Responsibility: 애플리케이션 상태만 관리)
+        // ============================================================
+        const AppState = {
+            densityType: 'quadratic',
+            paramA: 1,
+            paramB: 1,
+            intervalStart: 0,
+            intervalEnd: 1,
+            riemannN: 10,
+            
+            // Observer 패턴: 상태 변경 시 콜백 호출
+            listeners: [],
+            
+            subscribe(callback) {
+                this.listeners.push(callback);
+            },
+            
+            notify() {
+                this.listeners.forEach(callback => callback(this));
+            },
+            
+            update(newState) {
+                Object.assign(this, newState);
+                this.notify();
+            },
+            
+            getDensityFunction() {
+                const config = DensityFunctions[this.densityType];
+                return (x) => config.fn(x, { a: this.paramA, b: this.paramB });
+            },
+            
+            getLatex() {
+                const config = DensityFunctions[this.densityType];
+                return config.latex(this.paramA, this.paramB);
+            }
+        };
+
+        // ============================================================
+        // 4. 그래프 렌더러 모듈 (Single Responsibility: 그래프 렌더링만 담당)
+        // ============================================================
+        const GraphRenderer = {
+            config: {
+                responsive: true,
+                displayModeBar: false
+            },
+            
+            layout: {
+                margin: { t: 30, r: 20, b: 40, l: 50 },
+                xaxis: { title: 'x' },
+                yaxis: { title: '', rangemode: 'tozero' },
+                showlegend: false
+            },
+
+            // 밀도 함수 그래프
+            renderDensityGraph(containerId, state) {
+                const { intervalStart: a, intervalEnd: b } = state;
+                const rho = state.getDensityFunction();
+                
+                const xVals = this.linspace(a, b, 200);
+                const yVals = xVals.map(rho);
+
+                const trace = {
+                    x: xVals,
+                    y: yVals,
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(52, 152, 219, 0.3)',
+                    line: { color: '#3498db', width: 3 }
+                };
+
+                const layout = {
+                    ...this.layout,
+                    yaxis: { ...this.layout.yaxis, title: 'ρ(x)' },
+                    height: 250
+                };
+
+                Plotly.react(containerId, [trace], layout, this.config);
+            },
+
+            // 모멘트 함수 그래프
+            renderMomentGraph(containerId, state) {
+                const { intervalStart: a, intervalEnd: b } = state;
+                const rho = state.getDensityFunction();
+                
+                const xVals = this.linspace(a, b, 200);
+                const yVals = xVals.map(x => x * rho(x));
+
+                const trace = {
+                    x: xVals,
+                    y: yVals,
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(231, 76, 60, 0.3)',
+                    line: { color: '#e74c3c', width: 3 }
+                };
+
+                const layout = {
+                    ...this.layout,
+                    yaxis: { ...this.layout.yaxis, title: 'x·ρ(x)' },
+                    height: 250
+                };
+
+                Plotly.react(containerId, [trace], layout, this.config);
+            },
+
+            // 리만 합 그래프
+            renderRiemannGraph(containerId, state) {
+                const { intervalStart: a, intervalEnd: b, riemannN: n } = state;
+                const rho = state.getDensityFunction();
+                
+                // 연속 함수
+                const xVals = this.linspace(a, b, 200);
+                const yVals = xVals.map(rho);
+
+                const continuousTrace = {
+                    x: xVals,
+                    y: yVals,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'ρ(x)',
+                    line: { color: '#3498db', width: 3 }
+                };
+
+                // 리만 합 막대
+                const bars = NumericalIntegration.riemannSumData(rho, a, b, n);
+                const barTrace = {
+                    x: bars.map(bar => bar.x + bar.width / 2),
+                    y: bars.map(bar => bar.height),
+                    type: 'bar',
+                    name: '리만 합',
+                    marker: { color: 'rgba(46, 204, 113, 0.5)' },
+                    width: bars[0]?.width * 0.95 || 0.1
+                };
+
+                // 질량중심 수직선
+                const result = NumericalIntegration.centerOfMass(rho, a, b);
+                const comTrace = {
+                    x: [result.centerOfMass, result.centerOfMass],
+                    y: [0, Math.max(...yVals) * 1.2],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: '질량중심',
+                    line: { color: '#e74c3c', width: 3, dash: 'dash' }
+                };
+
+                const layout = {
+                    ...this.layout,
+                    height: 300,
+                    showlegend: true,
+                    legend: { x: 0.7, y: 1 },
+                    barmode: 'overlay'
+                };
+
+                Plotly.react(containerId, [barTrace, continuousTrace, comTrace], layout, this.config);
+            },
+
+            // 비교 그래프
+            renderComparisonGraph(containerId, comparisons) {
+                const traces = comparisons.map((comp, idx) => {
+                    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#9b59b6', '#f39c12'];
+                    return {
+                        x: comp.xVals,
+                        y: comp.yVals,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: comp.name,
+                        line: { color: colors[idx % colors.length], width: 2 }
+                    };
+                });
+
+                // 질량중심 마커
+                comparisons.forEach((comp, idx) => {
+                    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#9b59b6', '#f39c12'];
+                    traces.push({
+                        x: [comp.centerOfMass],
+                        y: [0],
+                        type: 'scatter',
+                        mode: 'markers',
+                        name: `${comp.name} 질량중심`,
+                        marker: { 
+                            color: colors[idx % colors.length], 
+                            size: 15, 
+                            symbol: 'triangle-up'
+                        },
+                        showlegend: false
+                    });
+                });
+
+                const layout = {
+                    ...this.layout,
+                    height: 300,
+                    showlegend: true,
+                    legend: { orientation: 'h', y: -0.2 }
+                };
+
+                Plotly.react(containerId, traces, layout, this.config);
+            },
+
+            // 유틸리티: 등간격 배열 생성
+            linspace(start, end, num) {
+                const arr = [];
+                const step = (end - start) / (num - 1);
+                for (let i = 0; i < num; i++) {
+                    arr.push(start + step * i);
+                }
+                return arr;
+            }
+        };
+
+        // ============================================================
+        // 5. UI 업데이터 모듈 (Single Responsibility: DOM 업데이트만 담당)
+        // ============================================================
+        const UIUpdater = {
+            updateFormulaDisplay(state) {
+                const latex = state.getLatex();
+                const container = document.getElementById('formula-display');
+                container.innerHTML = `$${latex}$`;
+                this.renderMath(container);
+            },
+            checkDensityValidity(state) {
+                const rho = state.getDensityFunction();
+                const { intervalStart: a, intervalEnd: b } = state;
+                const testPoints = GraphRenderer.linspace(a, b, 50);
+                
+                const hasNegative = testPoints.some(x => rho(x) <= 0);
+                
+                const warningEl = document.getElementById('density-warning');
+                if (warningEl) {
+                    warningEl.style.display = hasNegative ? 'block' : 'none';
+                }
+            },
+
+
+            updateResults(state) {
+                const rho = state.getDensityFunction();
+                const { intervalStart: a, intervalEnd: b, riemannN: n } = state;
+
+                // 정확한 값
+                const exact = NumericalIntegration.centerOfMass(rho, a, b);
+                
+                // 리만 합
+                const riemann = NumericalIntegration.centerOfMassRiemann(rho, a, b, n);
+
+                // 결과 표시
+                document.getElementById('mass-exact').textContent = exact.mass.toFixed(6);
+                document.getElementById('mass-riemann').textContent = riemann.mass.toFixed(6);
+                document.getElementById('moment-exact').textContent = exact.moment.toFixed(6);
+                document.getElementById('moment-riemann').textContent = riemann.moment.toFixed(6);
+                document.getElementById('com-exact').textContent = exact.centerOfMass.toFixed(6);
+                document.getElementById('com-riemann').textContent = riemann.centerOfMass.toFixed(6);
+
+                // 정확도 바
+                const error = Math.abs(riemann.centerOfMass - exact.centerOfMass) / exact.centerOfMass;
+                const accuracy = Math.max(0, (1 - error) * 100);
+                document.getElementById('accuracy-bar').style.width = `${accuracy}%`;
+                document.getElementById('accuracy-value').textContent = `${accuracy.toFixed(1)}%`;
+
+                return exact;
+            },
+
+            updateRodVisualization(state, exact) {
+                const { intervalStart: a, intervalEnd: b } = state;
+                const range = b - a;
+                const geometricCenter = (a + b) / 2;
+                
+                // 막대 그라데이션 업데이트
+                const rod = document.getElementById('rod');
+                const rho = state.getDensityFunction();
+                const gradient = this.createDensityGradient(rho, a, b);
+                rod.style.background = gradient;
+
+                // 마커 위치 업데이트
+                const rodContainer = document.getElementById('rod-container');
+                const containerWidth = rodContainer.offsetWidth - 100; // padding 제외
+                
+                const geoPos = ((geometricCenter - a) / range) * containerWidth + 50;
+                const comPos = ((exact.centerOfMass - a) / range) * containerWidth + 50;
+
+                document.getElementById('geometric-marker').style.left = `${geoPos}px`;
+                document.getElementById('com-marker').style.left = `${comPos}px`;
+            },
+
+            createDensityGradient(rho, a, b) {
+                const steps = 20;
+                const colors = [];
+                let maxRho = 0;
+                
+                for (let i = 0; i <= steps; i++) {
+                    const x = a + (i / steps) * (b - a);
+                    maxRho = Math.max(maxRho, rho(x));
+                }
+
+                for (let i = 0; i <= steps; i++) {
+                    const x = a + (i / steps) * (b - a);
+                    const intensity = rho(x) / maxRho;
+                    const alpha = 0.3 + intensity * 0.7;
+                    colors.push(`rgba(52, 152, 219, ${alpha}) ${(i / steps) * 100}%`);
+                }
+
+                return `linear-gradient(to right, ${colors.join(', ')})`;
+            },
+
+            updateCalculationSteps(state, exact) {
+                const { intervalStart: a, intervalEnd: b } = state;
+                const latex = state.getLatex();
+                
+                // Step 2: 질량 계산
+                document.getElementById('step2-formula').innerHTML = `
+                    $$M = \\int_{${a}}^{${b}} ${latex.replace('\\rho(x) = ', '')} \\, dx = ${exact.mass.toFixed(4)}$$
+                `;
+
+                // Step 3: 모멘트 계산
+                document.getElementById('step3-formula').innerHTML = `
+                    $$M_0 = \\int_{${a}}^{${b}} x \\cdot (${latex.replace('\\rho(x) = ', '')}) \\, dx = ${exact.moment.toFixed(4)}$$
+                `;
+
+                // Step 4: 질량중심
+                document.getElementById('step4-formula').innerHTML = `
+                    $$\\bar{x} = \\frac{M_0}{M} = \\frac{${exact.moment.toFixed(4)}}{${exact.mass.toFixed(4)}} = ${exact.centerOfMass.toFixed(4)}$$
+                `;
+
+                // LaTeX 렌더링
+                this.renderMath(document.getElementById('steps-content'));
+            },
+
+            updateBalanceSimulation(state, exact) {
+                document.getElementById('balance-com').textContent = exact.centerOfMass.toFixed(3);
+                BalanceSimulator.setCenterOfMass(exact.centerOfMass);
+                BalanceSimulator.updateRodGradient(state);
+            },
+
+            renderMath(element) {
+                if (typeof renderMathInElement !== 'undefined') {
+                    renderMathInElement(element, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false }
+                        ]
+                    });
+                }
+            }
+        };
+
+        // ============================================================
+        // 6. 리만 합 애니메이터 (Single Responsibility: 애니메이션만 담당)
+        // ============================================================
+        const RiemannAnimator = {
+            isPlaying: false,
+            intervalId: null,
+            nValues: [1, 2, 4, 8, 16, 32, 64, 100],
+            currentIndex: 0,
+
+            toggle() {
+                if (this.isPlaying) {
+                    this.pause();
+                } else {
+                    this.play();
+                }
+            },
+
+            play() {
+                this.isPlaying = true;
+                document.getElementById('play-icon').textContent = '⏸';
+                document.getElementById('play-btn').querySelector('span:last-child') || 
+                    (document.getElementById('play-btn').innerHTML = '<span id="play-icon">⏸</span> 일시정지');
+                
+                this.intervalId = setInterval(() => {
+                    this.currentIndex = (this.currentIndex + 1) % this.nValues.length;
+                    const n = this.nValues[this.currentIndex];
+                    
+                    document.getElementById('riemann-n').value = n;
+                    document.getElementById('riemann-n-value').textContent = n;
+                    
+                    AppState.update({ riemannN: n });
+                }, 1000);
+            },
+
+            pause() {
+                this.isPlaying = false;
+                document.getElementById('play-icon').textContent = '▶';
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+            },
+
+            reset() {
+                this.pause();
+                this.currentIndex = 0;
+                const n = 10;
+                document.getElementById('riemann-n').value = n;
+                document.getElementById('riemann-n-value').textContent = n;
+                AppState.update({ riemannN: n });
+            }
+        };
+
+        // ============================================================
+        // 7. 계산 과정 토글러 (Single Responsibility: 토글만 담당)
+        // ============================================================
+        const CalculationSteps = {
+            isOpen: false,
+
+            toggle() {
+                this.isOpen = !this.isOpen;
+                const content = document.getElementById('steps-content');
+                const arrow = document.getElementById('steps-arrow');
+                
+                if (this.isOpen) {
+                    content.classList.add('active');
+                    arrow.textContent = '▲';
+                    UIUpdater.renderMath(content);
+                } else {
+                    content.classList.remove('active');
+                    arrow.textContent = '▼';
+                }
+            }
+        };
+
+        // ============================================================
+        // 8. 비교 관리자 (Single Responsibility: 비교 기능만 담당)
+        // ============================================================
+        const ComparisonManager = {
+            presets: {
+                        'uniform': { type: 'uniform', a: 1, b: 0, name: '균일 밀도' },
+                        'left-heavy': { type: 'linear-decrease', a: 2, b: 1.5, name: '왼쪽 무거움' },
+                        'right-heavy': { type: 'linear-increase', a: 0.5, b: 2, name: '오른쪽 무거움' },
+                        'center-heavy': { type: 'sine', a: 1, b: 0.8, name: '중앙 무거움' },
+                        'edges-heavy': { type: 'quadratic', a: 1.5, b: 2, name: '양끝 무거움' }
+                    },
+
+            applyPreset(presetName) {
+                const preset = this.presets[presetName];
+                if (preset) {
+                    document.getElementById('density-type').value = preset.type;
+                    document.getElementById('param-a').value = preset.a;
+                    document.getElementById('param-b').value = preset.b;
+                    document.getElementById('param-a-value').textContent = preset.a.toFixed(1);
+                    document.getElementById('param-b-value').textContent = preset.b.toFixed(1);
+                    
+                    AppState.update({
+                        densityType: preset.type,
+                        paramA: preset.a,
+                        paramB: preset.b
+                    });
+
+                    // 버튼 활성화 표시
+                    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+                    event.target.classList.add('active');
+                }
+            },
+
+            updateComparisonTable(state) {
+                const tbody = document.getElementById('comparison-tbody');
+                const { intervalStart: a, intervalEnd: b } = state;
+                const geometricCenter = (a + b) / 2;
+                
+                const comparisons = [];
+                
+                Object.entries(this.presets).forEach(([key, preset]) => {
+                    const config = DensityFunctions[preset.type];
+                    const rho = (x) => config.fn(x, { a: preset.a, b: preset.b });
+                    const result = NumericalIntegration.centerOfMass(rho, a, b);
+                    
+                    comparisons.push({
+                        name: preset.name,
+                        latex: config.latex(preset.a, preset.b),
+                        mass: result.mass,
+                        moment: result.moment,
+                        centerOfMass: result.centerOfMass,
+                        diff: result.centerOfMass - geometricCenter,
+                        xVals: GraphRenderer.linspace(a, b, 100),
+                        yVals: GraphRenderer.linspace(a, b, 100).map(rho)
+                    });
+                });
+
+                // 테이블 업데이트
+                tbody.innerHTML = comparisons.map(comp => `
+                    <tr>
+                        <td>${comp.name}</td>
+                        <td>${comp.mass.toFixed(4)}</td>
+                        <td>${comp.moment.toFixed(4)}</td>
+                        <td><strong>${comp.centerOfMass.toFixed(4)}</strong></td>
+                        <td style="color: ${comp.diff >= 0 ? '#27ae60' : '#e74c3c'}">
+                            ${comp.diff >= 0 ? '+' : ''}${comp.diff.toFixed(4)}
+                        </td>
+                    </tr>
+                `).join('');
+
+                // 비교 그래프 업데이트
+                GraphRenderer.renderComparisonGraph('comparison-graph', comparisons);
+            }
+        };
+
+        // ============================================================
+        // 9. 균형 시뮬레이터 (Single Responsibility: 균형 시뮬레이션만 담당)
+        // ============================================================
+        const BalanceSimulator = {
+            centerOfMass: 0.5,
+            pivotPosition: 0.5,
+            isDragging: false,
+
+            init() {
+                const pivot = document.getElementById('balance-pivot');
+                const container = document.getElementById('balance-container');
+
+                pivot.addEventListener('mousedown', (e) => {
+                    this.isDragging = true;
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!this.isDragging) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width;
+                    this.pivotPosition = Math.max(0.1, Math.min(0.9, x));
+                    
+                    this.updateDisplay();
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                });
+
+                // 터치 지원
+                pivot.addEventListener('touchstart', (e) => {
+                    this.isDragging = true;
+                    e.preventDefault();
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (!this.isDragging) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    const x = (touch.clientX - rect.left) / rect.width;
+                    this.pivotPosition = Math.max(0.1, Math.min(0.9, x));
+                    
+                    this.updateDisplay();
+                });
+
+                document.addEventListener('touchend', () => {
+                    this.isDragging = false;
+                });
+            },
+
+            setCenterOfMass(com) {
+                this.centerOfMass = com;
+                this.updateDisplay();
+            },
+
+            updateRodGradient(state) {
+                const rod = document.getElementById('balance-rod');
+                const rho = state.getDensityFunction();
+                const { intervalStart: a, intervalEnd: b } = state;
+                rod.style.background = UIUpdater.createDensityGradient(rho, a, b);
+            },
+
+            updateDisplay() {
+                const pivot = document.getElementById('balance-pivot');
+                const rod = document.getElementById('balance-rod');
+                const message = document.getElementById('balance-message');
+                
+                // 받침점 위치만 업데이트 (막대는 항상 중앙에 고정)
+                pivot.style.left = `${this.pivotPosition * 100}%`;
+                document.getElementById('pivot-position').textContent = this.pivotPosition.toFixed(3);
+
+                // 기울기 계산 (받침점 기준으로 회전)
+                const diff = this.centerOfMass - this.pivotPosition;
+                const angle = Math.max(-30, Math.min(30, diff * 100));
+                
+                // 막대는 중앙 고정, 받침점 위치 기준으로 기울기만 변경
+                // transform-origin을 받침점 위치로 동적 설정
+                const originX = this.pivotPosition * 100;
+                rod.style.transformOrigin = `${originX}% center`;
+                rod.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+
+                // 균형 메시지
+                const tolerance = 0.02;
+                if (Math.abs(diff) < tolerance) {
+                    message.textContent = '⚖️ 균형!';
+                    message.className = 'balance-message balanced';
+                } else if (diff > 0) {
+                    message.textContent = '→ 오른쪽으로 기울어짐';
+                    message.className = 'balance-message unbalanced';
+                } else {
+                    message.textContent = '← 왼쪽으로 기울어짐';
+                    message.className = 'balance-message unbalanced';
+                }
+            }
+        };
+
+        // ============================================================
+        // 10. 메인 컨트롤러 (Dependency Inversion: 모든 모듈 조율)
+        // ============================================================
+        const MainController = {
+            init() {
+                this.setupEventListeners();
+                this.subscribeToState();
+                BalanceSimulator.init();
+                
+                // 초기 렌더링
+                setTimeout(() => {
+                    AppState.notify();
+                }, 100);
+            },
+
+            setupEventListeners() {
+                // 밀도 함수 유형 선택
+                document.getElementById('density-type').addEventListener('change', (e) => {
+                    AppState.update({ densityType: e.target.value });
+                });
+
+                // 파라미터 A 슬라이더
+                document.getElementById('param-a').addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    document.getElementById('param-a-value').textContent = value.toFixed(1);
+                    AppState.update({ paramA: value });
+                });
+
+                // 파라미터 B 슬라이더
+                document.getElementById('param-b').addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    document.getElementById('param-b-value').textContent = value.toFixed(1);
+                    AppState.update({ paramB: value });
+                });
+
+                // 구간 설정
+                document.getElementById('interval-start').addEventListener('change', (e) => {
+                    AppState.update({ intervalStart: parseFloat(e.target.value) });
+                });
+
+                document.getElementById('interval-end').addEventListener('change', (e) => {
+                    AppState.update({ intervalEnd: parseFloat(e.target.value) });
+                });
+
+                // 리만 분할 수 슬라이더
+                document.getElementById('riemann-n').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('riemann-n-value').textContent = value;
+                    AppState.update({ riemannN: value });
+                });
+            },
+
+            subscribeToState() {
+                AppState.subscribe((state) => {
+                    // 모든 그래프 업데이트
+                    GraphRenderer.renderDensityGraph('density-graph', state);
+                    GraphRenderer.renderMomentGraph('moment-graph', state);
+                    GraphRenderer.renderRiemannGraph('riemann-graph', state);
+
+                    // UI 업데이트
+                    UIUpdater.updateFormulaDisplay(state);
+                    const exact = UIUpdater.updateResults(state);
+                    UIUpdater.updateRodVisualization(state, exact);
+                    UIUpdater.updateCalculationSteps(state, exact);
+                    UIUpdater.updateBalanceSimulation(state, exact);
+
+                    // 비교 테이블 업데이트
+                    ComparisonManager.updateComparisonTable(state);
+                });
+            }
+        };
+
+        // ============================================================
+        // 초기화
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            MainController.init();
+        });
+    </script>
+</body>
+</html>
